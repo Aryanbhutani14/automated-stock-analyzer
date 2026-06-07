@@ -1,5 +1,7 @@
 package com.stockanalyzer.scheduler;
 
+import com.stockanalyzer.service.AiSummaryService;
+import com.stockanalyzer.service.AlertNotificationService;
 import com.stockanalyzer.service.SignalService;
 import com.stockanalyzer.service.StockDataFetchService;
 import com.stockanalyzer.service.TechnicalIndicatorService;
@@ -17,11 +19,10 @@ import java.time.LocalDateTime;
  *  1. Fetch OHLCV data from Alpha Vantage
  *  2. Calculate technical indicators (MA, RSI, Volume, Momentum)
  *  3. Generate buy/sell signals
+ *  4. Process alert notifications (email)
+ *  5. Generate AI stock summaries
  *
  * Cron: 0 0 13 * * MON-FRI  →  1:00 PM UTC  ≈  6:30 PM IST
- *
- * AI summaries and email alerts are triggered separately
- * after signals are available (Phase 3).
  */
 @Slf4j
 @Component
@@ -31,6 +32,8 @@ public class StockDataScheduler {
     private final StockDataFetchService      fetchService;
     private final TechnicalIndicatorService  indicatorService;
     private final SignalService              signalService;
+    private final AlertNotificationService   alertNotificationService;
+    private final AiSummaryService           aiSummaryService;
 
     /**
      * Full daily pipeline — runs automatically on weekdays at 6:30 PM IST.
@@ -43,16 +46,24 @@ public class StockDataScheduler {
 
         try {
             // Step 1 — Fetch OHLCV
-            log.info("Step 1/3 ── Fetching market data");
+            log.info("Step 1/5 ── Fetching market data");
             fetchService.fetchAndStoreAllStocks();
 
             // Step 2 — Calculate indicators
-            log.info("Step 2/3 ── Calculating technical indicators");
+            log.info("Step 2/5 ── Calculating technical indicators");
             indicatorService.calculateForAllStocks();
 
             // Step 3 — Generate signals
-            log.info("Step 3/3 ── Generating buy/sell signals");
+            log.info("Step 3/5 ── Generating buy/sell signals");
             signalService.generateSignalsForAllStocks();
+
+            // Step 4 — Process alert notifications
+            log.info("Step 4/5 ── Processing user alerts");
+            alertNotificationService.processAllAlerts();
+
+            // Step 5 — AI summaries
+            log.info("Step 5/5 ── Generating AI summaries");
+            aiSummaryService.generateForAllStocks();
 
             log.info("Daily pipeline completed successfully at {}", LocalDateTime.now());
 
