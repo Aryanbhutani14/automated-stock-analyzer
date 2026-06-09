@@ -1,0 +1,46 @@
+# Miscellaneous
+*.log
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+tmp/
+out/
+bin/
+target/
+.gradle/
+build/
+
+# IDEs and editors
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.springBeans
+.sts4-cache
+
+# Flutter / Dart specific
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+/mobile/build/
+/mobile/.idea/
+/mobile/.dart_tool/
+/mobile/lib/generated/
+/mobile/.metadata
+/mobile/.packages
+/mobile/pubspec.lock
