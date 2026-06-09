@@ -13,7 +13,7 @@ class AppTheme {
         error: Color(0xFFEF4444),
       ),
       fontFamily: 'Plus Jakarta Sans',
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: Color(0xFF161C2D),
         elevation: 8,
         shape: RoundedRectangleBorder(
