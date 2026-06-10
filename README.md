@@ -123,3 +123,13 @@ cd mobile
 flutter pub get
 flutter run
 ```
+
+#### 📱 API Host Configuration (Emulator vs. Physical Device)
+Depending on your development setup, make sure the `_host` variable in [auth_service.dart](file:///c:/Users/ARYAN%20BHUTANI/Desktop/Automated_stock_analyzer/mobile/lib/data/api/auth_service.dart) and [stock_provider.dart](file:///c:/Users/ARYAN%20BHUTANI/Desktop/Automated_stock_analyzer/mobile/lib/providers/stock_provider.dart) is configured correctly:
+
+* **Android Emulator**: Set `_host` to `10.0.2.2` (routes to the computer's `localhost`).
+* **Physical Android Device (Wi-Fi)**: Both your phone and computer must be on the same Wi-Fi network. Set `_host` to your computer's local IPv4 address (e.g., `192.168.1.12`).
+* **Physical Android Device (USB / adb reverse)**: Connect your device via USB with USB debugging enabled. Set `_host` to `127.0.0.1` and run the following ADB command to forward port 8080:
+  ```powershell
+  adb reverse tcp:8080 tcp:8080
+  ```
