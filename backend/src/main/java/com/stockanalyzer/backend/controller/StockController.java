@@ -9,6 +9,7 @@ import com.stockanalyzer.backend.repository.StockPriceRepository;
 import com.stockanalyzer.backend.repository.StockRepository;
 import com.stockanalyzer.backend.repository.TechnicalIndicatorRepository;
 import com.stockanalyzer.backend.service.YahooFinanceService;
+import com.stockanalyzer.backend.scheduler.StockDataScheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +34,9 @@ public class StockController {
 
     @Autowired
     private TechnicalIndicatorRepository indicatorRepository;
+
+    @Autowired
+    private StockDataScheduler stockDataScheduler;
 
     @GetMapping
     public ResponseEntity<List<StockDto>> getAllStocks() {
@@ -100,7 +104,7 @@ public class StockController {
     public ResponseEntity<?> syncStocks() {
         CompletableFuture.runAsync(() -> {
             try {
-                yahooFinanceService.syncAllActiveStocks();
+                stockDataScheduler.triggerManually();
             } catch (Exception e) {
                 // Logged automatically inside service
             }
