@@ -24,7 +24,15 @@ class AuthProvider extends ChangeNotifier {
     _token = await _authService.getToken();
     _username = await _authService.getUsername();
     if (_token != null && _username != null) {
-      _status = AuthStatus.authenticated;
+      final isValid = await _authService.validateToken(_token!);
+      if (isValid) {
+        _status = AuthStatus.authenticated;
+      } else {
+        await _authService.logout();
+        _token = null;
+        _username = null;
+        _status = AuthStatus.unauthenticated;
+      }
     } else {
       _status = AuthStatus.unauthenticated;
     }

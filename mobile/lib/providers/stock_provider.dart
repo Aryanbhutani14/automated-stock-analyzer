@@ -58,7 +58,7 @@ class StockProvider extends ChangeNotifier {
         _errorMessage = 'Failed to load stocks';
       }
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load stocks from server';
+      _errorMessage = _getErrorMessage(e, 'Failed to load stocks from server');
     } catch (e) {
       _errorMessage = 'An unexpected error occurred while fetching stocks';
     } finally {
@@ -115,7 +115,7 @@ class StockProvider extends ChangeNotifier {
         _errorMessage = 'Failed to load screener results';
       }
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to query screener';
+      _errorMessage = _getErrorMessage(e, 'Failed to query screener');
     } catch (e) {
       _errorMessage = 'An unexpected error occurred while running screener';
     } finally {
@@ -153,7 +153,7 @@ class StockProvider extends ChangeNotifier {
         _errorMessage = 'Failed to load signals feed';
       }
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load signals';
+      _errorMessage = _getErrorMessage(e, 'Failed to load signals');
     } catch (e) {
       _errorMessage = 'An unexpected error occurred while loading signals';
     } finally {
@@ -241,7 +241,7 @@ class StockProvider extends ChangeNotifier {
         _errorMessage = 'Failed to load watchlists';
       }
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load watchlists';
+      _errorMessage = _getErrorMessage(e, 'Failed to load watchlists');
     } catch (e) {
       _errorMessage = 'An unexpected error occurred while fetching watchlists';
     } finally {
@@ -361,7 +361,7 @@ class StockProvider extends ChangeNotifier {
         _errorMessage = 'Failed to load alerts';
       }
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load alerts';
+      _errorMessage = _getErrorMessage(e, 'Failed to load alerts');
     } catch (e) {
       _errorMessage = 'An unexpected error occurred while fetching alerts';
     } finally {
@@ -458,7 +458,7 @@ class StockProvider extends ChangeNotifier {
         return BacktestResultModel.fromJson(response.data);
       }
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to execute backtest';
+      _errorMessage = _getErrorMessage(e, 'Failed to execute backtest');
     } catch (e) {
       _errorMessage = 'An unexpected error occurred while running backtest';
     } finally {
@@ -487,13 +487,24 @@ class StockProvider extends ChangeNotifier {
         _errorMessage = 'Failed to load backtest history';
       }
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load backtest history';
+      _errorMessage = _getErrorMessage(e, 'Failed to load backtest history');
     } catch (e) {
       _errorMessage = 'An unexpected error occurred while loading backtest history';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  String _getErrorMessage(DioException e, String defaultMessage) {
+    final data = e.response?.data;
+    if (data is Map) {
+      return data['message']?.toString() ?? data['error']?.toString() ?? defaultMessage;
+    }
+    if (data is String && data.isNotEmpty) {
+      return data;
+    }
+    return defaultMessage;
   }
 }
 

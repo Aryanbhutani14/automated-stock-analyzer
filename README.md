@@ -60,11 +60,12 @@ A professional, full-stack stock market analytics application designed for track
   - **Signals**: Real-time feed of signals triggered today with strategy metrics.
   - **Updated Details Sheet**: Displays a premium indicators grid showing current indicators status, and a chronological history of signals generated for the stock.
 
-### 📅 Phase 4: Watchlists, Price Alerts, AI & Backtester (Upcoming)
-- **Watchlists**: Create multiple watchlists, adding/removing stocks dynamically.
-- **Custom Alerts**: Define price thresholds, moving average boundaries, or RSI parameters to trigger Async HTML email notifications.
-- **AI Summary**: Integration of OpenAI `gpt-4o-mini` to construct technical summaries dynamically from live parameters.
-- **Backtesting Simulation**: Simulates strategy trading returns on historical stock prices, displaying P&L charts, win rates, max drawdown, and execution logs.
+### 📅 Phase 4: Watchlists, Price Alerts, AI & Backtester [Completed]
+- **Watchlists**: Enabled users to create multiple watchlists, adding/removing stocks dynamically with current indicators.
+- **Custom Alerts**: Configured price/indicator thresholds (MA crossovers, RSI levels, volume breakouts) to trigger async HTML card-based email alerts with daily duplicate trigger checks.
+- **AI Summary Profile**: Integrated OpenAI `gpt-4o-mini` to construct dynamic technical profiles from live parameters with offline mock fallbacks.
+- **Strategy Backtester**: Simulates strategy trading returns on historical stock prices, computing total returns, win rates, max drawdown, and displaying transaction ledgers.
+- **Flutter UI Upgrades**: Restructured client into a 5-tab Bottom Navigation bar, added dynamic AI summary cards to the detail view sheets, and implemented watchlist toggle check-sheets.
 
 ---
 

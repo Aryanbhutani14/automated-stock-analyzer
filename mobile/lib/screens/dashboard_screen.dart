@@ -397,7 +397,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _refreshStocks,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6366F1)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Try Again'),
               ),
             ],
@@ -431,6 +434,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: const Text('Seed & Sync Yahoo Finance'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),

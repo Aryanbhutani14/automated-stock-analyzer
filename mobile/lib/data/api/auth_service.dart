@@ -56,6 +56,20 @@ class AuthService {
     }
   }
 
+  Future<bool> validateToken(String token) async {
+    try {
+      final response = await _dio.get(
+        '$_baseUrl/me',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
