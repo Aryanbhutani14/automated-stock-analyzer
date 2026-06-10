@@ -7,6 +7,7 @@ import com.stockanalyzer.backend.model.Stock;
 import com.stockanalyzer.backend.model.StockPrice;
 import com.stockanalyzer.backend.repository.StockPriceRepository;
 import com.stockanalyzer.backend.repository.StockRepository;
+import com.stockanalyzer.backend.repository.TechnicalIndicatorRepository;
 import com.stockanalyzer.backend.service.YahooFinanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,9 @@ public class StockController {
     @Autowired
     private YahooFinanceService yahooFinanceService;
 
+    @Autowired
+    private TechnicalIndicatorRepository indicatorRepository;
+
     @GetMapping
     public ResponseEntity<List<StockDto>> getAllStocks() {
         List<Stock> stocks = stockRepository.findAll().stream()
@@ -43,9 +47,14 @@ public class StockController {
         return ResponseEntity.ok(stockDtos);
     }
 
+    @GetMapping("/sectors")
+    public ResponseEntity<List<String>> getSectors() {
+        return ResponseEntity.ok(stockRepository.findAllActiveSectors());
+    }
+
     @GetMapping("/{symbol}")
     public ResponseEntity<StockDetailDto> getStockDetails(@PathVariable String symbol) {
-        return stockRepository.findBySymbol(symbol)
+        return stockRepository.findBySymbolIgnoreCase(symbol)
                 .map(stock -> {
                     StockDto stockDto = convertToDto(stock);
                     List<StockPrice> priceHistory = stockPriceRepository.findByStockOrderByTradeDateAsc(stock);
@@ -61,10 +70,31 @@ public class StockController {
                             ))
                             .collect(Collectors.toList());
 
-                    return ResponseEntity.ok(new StockDetailDto(stockDto, points));
+                    var indicator = indicatorRepository.findLatestByStockId(stock.getId()).orElse(null);
+
+                    Double ma50 = indicator != null ? indicator.getMa50() : null;
+                    Double ma220 = indicator != null ? indicator.getMa220() : null;
+                    Double rsi14 = indicator != null ? indicator.getRsi14() : null;
+                    Long volumeAvg20 = indicator != null ? indicator.getVolumeAvg20() : null;
+                    Double week52High = indicator != null ? indicator.getWeek52High() : null;
+                    Double week52Low = indicator != null ? indicator.getWeek52Low() : null;
+                    Double momentumScore = indicator != null ? indicator.getMomentumScore() : null;
+
+                    return ResponseEntity.ok(new StockDetailDto(
+                            stockDto,
+                            points,
+                            ma50,
+                            ma220,
+                            rsi14,
+                            volumeAvg20,
+                            week52High,
+                            week52Low,
+                            momentumScore
+                    ));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
 
     @PostMapping("/sync")
     public ResponseEntity<?> syncStocks() {

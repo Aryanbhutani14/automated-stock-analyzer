@@ -12,6 +12,16 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  int _currentIndex = 0;
+
+  // Screener states
+  String _selectedScreenerFilter = 'ALL';
+  String _selectedExchange = '';
+  String _selectedSector = '';
+
+  // Signals states
+  String _selectedSignalType = ''; // '' for All, 'BUY', 'SELL'
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +71,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _runScreener() {
+    context.read<StockProvider>().fetchScreenerResults(
+      _selectedScreenerFilter,
+      exchange: _selectedExchange,
+      sector: _selectedSector,
+    );
+  }
+
+  void _runSignalsFeed() {
+    context.read<StockProvider>().fetchSignals(
+      type: _selectedSignalType,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -69,16 +93,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'STOCK ANALYZER',
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, letterSpacing: 1.2),
+        title: Text(
+          _currentIndex == 0
+              ? 'STOCK ANALYZER'
+              : (_currentIndex == 1 ? 'TECHNICAL SCREENER' : 'BUY/SELL SIGNALS'),
+          style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, letterSpacing: 1.2),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sync_rounded, color: Color(0xFF06B6D4)),
-            tooltip: 'Sync with Yahoo Finance',
-            onPressed: _triggerSync,
-          ),
+          if (_currentIndex == 0)
+            IconButton(
+              icon: const Icon(Icons.sync_rounded, color: Color(0xFF06B6D4)),
+              tooltip: 'Sync with Yahoo Finance',
+              onPressed: _triggerSync,
+            ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
             tooltip: 'Logout',
@@ -97,59 +124,135 @@ class _DashboardScreenState extends State<DashboardScreen> {
             center: Alignment(0.8, -0.8),
             radius: 1.5,
             colors: [
-              Color(0x1506B6D4), // Subtle Cyan glow top right
-              Color(0xFF0B0F19), // Dark bg
+              Color(0x1506B6D4), // Subtle Cyan glow
+              Color(0xFF0B0F19), // Dark background
             ],
           ),
         ),
-        child: RefreshIndicator(
-          onRefresh: _refreshStocks,
-          color: const Color(0xFF6366F1),
-          backgroundColor: const Color(0xFF161C2D),
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              // Welcome Card
-              Card(
-                elevation: 4,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF161C2D), Color(0xFF1A233A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome back, $username!',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Authentication Session: Active (JWT Token protected)',
-                          style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
+        child: IndexedStack(
+          index: _currentIndex,
+          children: [
+            _buildDashboardTab(username, stockProvider),
+            _buildScreenerTab(stockProvider),
+            _buildSignalsTab(stockProvider),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        backgroundColor: const Color(0xFF0F1524),
+        selectedItemColor: const Color(0xFF6366F1),
+        unselectedItemColor: Colors.grey.shade500,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          if (index == 1) {
+            context.read<StockProvider>().fetchSectors();
+            _runScreener();
+          } else if (index == 2) {
+            _runSignalsFeed();
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_rounded),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.filter_alt_rounded),
+            label: 'Screener',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.flash_on_rounded),
+            label: 'Signals',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── TAB 1: DASHBOARD ──────────────────────────────────────────────────────
+  Widget _buildDashboardTab(String username, StockProvider stockProvider) {
+    return RefreshIndicator(
+      onRefresh: _refreshStocks,
+      color: const Color(0xFF6366F1),
+      backgroundColor: const Color(0xFF161C2D),
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          // Welcome Card
+          Card(
+            elevation: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF161C2D), Color(0xFF1A233A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              const SizedBox(height: 20),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back, $username!',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Authentication Session: Active (JWT Token protected)',
+                      style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
 
-              // Overview Section Header
+          // Overview Section Header
+          const Text(
+            'Market Overview',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Stats row
+          Row(
+            children: [
+              Expanded(
+                child: _buildIndexCard('NIFTY 50', '22,350.20', '+0.64%', true),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildIndexCard('SENSEX', '73,610.45', '+0.62%', true),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Stock Screener Feed Title
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               const Text(
-                'Market Overview',
+                'Tracked Stocks',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -158,53 +261,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 12),
-
-              // Stats row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildIndexCard('NIFTY 50', '22,350.20', '+0.64%', true),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildIndexCard('SENSEX', '73,610.45', '+0.62%', true),
-                  ),
-                ],
+              TextButton.icon(
+                onPressed: _refreshStocks,
+                icon: const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF6366F1)),
+                label: const Text(
+                  'Refresh',
+                  style: TextStyle(color: Color(0xFF6366F1), fontSize: 12, fontWeight: FontWeight.bold),
+                ),
               ),
-              const SizedBox(height: 24),
-
-              // Stock Screener Feed Title
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Active Stock Screener',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Outfit',
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _refreshStocks,
-                    icon: const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF6366F1)),
-                    label: const Text(
-                      'Refresh',
-                      style: TextStyle(color: Color(0xFF6366F1), fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Feed list
-              _buildStockList(stockProvider),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+
+          // Feed list
+          _buildStockList(stockProvider),
+        ],
       ),
     );
   }
@@ -338,7 +409,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
-                    // Symbol & Sector info
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,8 +454,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                     ),
-
-                    // Price & Daily change bubble
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -425,8 +493,460 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
+
+  // ─── TAB 2: TECHNICAL SCREENER ─────────────────────────────────────────────
+  Widget _buildScreenerTab(StockProvider provider) {
+    final Map<String, String> filtersMap = {
+      'ALL': 'All Active Stocks',
+      'MA220_CROSSOVER': 'MA-220 Crossover',
+      'MA50_CROSSOVER': 'MA-50 Crossover',
+      'WEEK_52_HIGH': '52w High Breakout',
+      'VOLUME_BREAKOUT': 'Volume Breakout',
+      'RSI_OVERSOLD': 'RSI Oversold (<35)',
+      'RSI_OVERBOUGHT': 'RSI Overbought (>70)',
+      'MOMENTUM': 'High Momentum (>20%)'
+    };
+
+    return Column(
+      children: [
+        // Screener Filter Selection Card
+        Container(
+          padding: const EdgeInsets.all(12),
+          color: const Color(0xFF111726),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Select Technical Strategy Filter:',
+                style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 38,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: filtersMap.entries.map((entry) {
+                    final isSelected = _selectedScreenerFilter == entry.key;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: ChoiceChip(
+                        label: Text(
+                          entry.value,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.grey.shade400,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12,
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF6366F1),
+                        backgroundColor: const Color(0xFF1E2638),
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() {
+                              _selectedScreenerFilter = entry.key;
+                            });
+                            _runScreener();
+                          }
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  // Sector Dropdown
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E2638),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedSector.isEmpty ? null : _selectedSector,
+                          hint: const Text('All Sectors', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                          dropdownColor: const Color(0xFF1E2638),
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: '',
+                              child: Text('All Sectors'),
+                            ),
+                            ...provider.sectors.map((sector) {
+                              return DropdownMenuItem<String>(
+                                value: sector,
+                                child: Text(sector),
+                              );
+                            }),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedSector = val ?? '';
+                            });
+                            _runScreener();
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Exchange Dropdown
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E2638),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedExchange.isEmpty ? null : _selectedExchange,
+                          hint: const Text('All Exchanges', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                          dropdownColor: const Color(0xFF1E2638),
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                          items: const [
+                            DropdownMenuItem<String>(value: '', child: Text('All Exchanges')),
+                            DropdownMenuItem<String>(value: 'NSE', child: Text('NSE')),
+                            DropdownMenuItem<String>(value: 'BSE', child: Text('BSE')),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedExchange = val ?? '';
+                            });
+                            _runScreener();
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Screener Results list
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async => _runScreener(),
+            color: const Color(0xFF6366F1),
+            child: _buildScreenerList(provider),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScreenerList(StockProvider provider) {
+    if (provider.isLoading && provider.screenerResults.isEmpty) {
+      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1))));
+    }
+
+    if (provider.errorMessage != null && provider.screenerResults.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(provider.errorMessage!, style: const TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    if (provider.screenerResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.filter_list_off_rounded, size: 56, color: Colors.grey.shade600),
+            const SizedBox(height: 12),
+            const Text('No stocks match this filter criteria.', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: provider.screenerResults.length,
+      itemBuilder: (context, index) {
+        final res = provider.screenerResults[index];
+        final stock = StockModel(
+          id: 0,
+          symbol: res.symbol,
+          name: res.name,
+          exchange: res.exchange,
+          sector: res.sector,
+          industry: '',
+          price: res.closePrice,
+        );
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: const Color(0xFF161C2D),
+              border: Border.all(color: const Color(0x10FFFFFF)),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _showStockDetails(context, stock),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  res.symbol,
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0x156366F1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    res.exchange,
+                                    style: const TextStyle(color: Color(0xFF818CF8), fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(res.name, maxLines: 1, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                          ],
+                        ),
+                        Text(
+                          res.closePrice != null ? '₹${res.closePrice!.toStringAsFixed(2)}' : 'N/A',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Color(0x10FFFFFF), height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          res.sector,
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            res.matchedFilters.replaceAll('_', ' '),
+                            style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── TAB 3: SIGNALS TAB ────────────────────────────────────────────────────
+  Widget _buildSignalsTab(StockProvider provider) {
+    return Column(
+      children: [
+        // Signal type chips (All, BUY, SELL)
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          color: const Color(0xFF111726),
+          child: Row(
+            children: [
+              const Text('Filter Signals:', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              _buildSignalTypeChip('ALL', ''),
+              const SizedBox(width: 8),
+              _buildSignalTypeChip('BUY', 'BUY'),
+              const SizedBox(width: 8),
+              _buildSignalTypeChip('SELL', 'SELL'),
+            ],
+          ),
+        ),
+
+        // Signals Feed List
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async => _runSignalsFeed(),
+            color: const Color(0xFF6366F1),
+            child: _buildSignalsList(provider),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignalTypeChip(String label, String value) {
+    final isSelected = _selectedSignalType == value;
+    return ChoiceChip(
+      label: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+      selected: isSelected,
+      selectedColor: value == 'BUY'
+          ? const Color(0xFF10B981)
+          : (value == 'SELL' ? const Color(0xFFEF4444) : const Color(0xFF6366F1)),
+      backgroundColor: const Color(0xFF1E2638),
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _selectedSignalType = value;
+          });
+          _runSignalsFeed();
+        }
+      },
+    );
+  }
+
+  Widget _buildSignalsList(StockProvider provider) {
+    if (provider.isLoading && provider.signals.isEmpty) {
+      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1))));
+    }
+
+    if (provider.errorMessage != null && provider.signals.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(provider.errorMessage!, style: const TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    if (provider.signals.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.offline_bolt_rounded, size: 56, color: Colors.grey.shade600),
+            const SizedBox(height: 12),
+            const Text('No buy/sell signals generated today.', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: provider.signals.length,
+      itemBuilder: (context, index) {
+        final sig = provider.signals[index];
+        final bool isBuy = sig.signalType == 'BUY';
+        final Color typeColor = isBuy ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+        final dateStr = '${sig.signalDate.day.toString().padLeft(2, '0')}-${sig.signalDate.month.toString().padLeft(2, '0')}-${sig.signalDate.year}';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          color: const Color(0xFF161C2D),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: typeColor.withOpacity(0.2)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          sig.symbol,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: typeColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            sig.signalType,
+                            style: TextStyle(color: typeColor, fontWeight: FontWeight.bold, fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      dateStr,
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  sig.strategy.replaceAll('_', ' '),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  sig.notes,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Trigger: ₹${sig.triggerPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        // Quick lookup and show stock details
+                        final found = provider.stocks.firstWhere(
+                          (element) => element.symbol.toUpperCase() == sig.symbol.toUpperCase(),
+                          orElse: () => StockModel(
+                            id: 0,
+                            symbol: sig.symbol,
+                            name: sig.symbol,
+                            exchange: 'NSE',
+                            sector: '',
+                            industry: '',
+                            price: sig.triggerPrice,
+                          ),
+                        );
+                        _showStockDetails(context, found);
+                      },
+                      child: const Text('View Charts', style: TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
+// ─── BOTTOM SHEET STOCK DETAILS ──────────────────────────────────────────────
 class _StockDetailsBottomSheet extends StatefulWidget {
   final StockModel stock;
   const _StockDetailsBottomSheet({required this.stock});
@@ -437,6 +957,7 @@ class _StockDetailsBottomSheet extends StatefulWidget {
 
 class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
   StockDetailModel? _detail;
+  List<SignalModel> _stockSignals = [];
   bool _isLoading = true;
   String? _error;
 
@@ -448,10 +969,13 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
 
   void _loadDetail() async {
     try {
-      final detail = await context.read<StockProvider>().fetchStockDetail(widget.stock.symbol);
+      final stockProvider = context.read<StockProvider>();
+      final detail = await stockProvider.fetchStockDetail(widget.stock.symbol);
+      final signals = await stockProvider.fetchStockSignals(widget.stock.symbol);
       if (mounted) {
         setState(() {
           _detail = detail;
+          _stockSignals = signals;
           _isLoading = false;
           if (detail == null) {
             _error = "Failed to load historical price history.";
@@ -589,7 +1113,7 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
                         ),
                       ],
                     ),
-                    if (widget.stock.price != null)
+                    if (widget.stock.price != null && widget.stock.changePercent != null)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
@@ -648,6 +1172,19 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
               ),
               const SizedBox(height: 16),
 
+              // Technical Indicators Grid
+              _buildTechnicalIndicatorsGrid(_detail!),
+              const SizedBox(height: 16),
+
+              // Buy/Sell Signals History Feed
+              const Text(
+                'Buy/Sell Signals History',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              _buildSignalsHistoryFeed(),
+              const SizedBox(height: 20),
+
               // Key Stats Table
               if (_detail!.history.isNotEmpty) ...[
                 const Text(
@@ -673,7 +1210,6 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _detail!.history.length > 15 ? 15 : _detail!.history.length,
                   itemBuilder: (context, index) {
-                    // Show in reverse chronological order
                     final pricePoint = _detail!.history[_detail!.history.length - 1 - index];
                     final dateStr = '${pricePoint.date.day.toString().padLeft(2, '0')}-${pricePoint.date.month.toString().padLeft(2, '0')}-${pricePoint.date.year}';
                     return Card(
@@ -708,6 +1244,170 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTechnicalIndicatorsGrid(StockDetailModel detail) {
+    return Card(
+      color: const Color(0xFF161C2D),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0x10FFFFFF)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Technical Analysis Indicators',
+              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 2.2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              children: [
+                _buildIndicatorCard('RSI (14)', detail.rsi14 != null ? detail.rsi14!.toStringAsFixed(1) : 'N/A', 
+                    _getRsiStatus(detail.rsi14)),
+                _buildIndicatorCard('12M Momentum', detail.momentumScore != null ? '${detail.momentumScore!.toStringAsFixed(1)}%' : 'N/A',
+                    detail.momentumScore != null && detail.momentumScore! > 20 ? 'Strong Bullish' : 'Neutral'),
+                _buildIndicatorCard('MA (50)', detail.ma50 != null ? '₹${detail.ma50!.toStringAsFixed(1)}' : 'N/A',
+                    _getMaStatus(widget.stock.price, detail.ma50)),
+                _buildIndicatorCard('MA (220)', detail.ma220 != null ? '₹${detail.ma220!.toStringAsFixed(1)}' : 'N/A',
+                    _getMaStatus(widget.stock.price, detail.ma220)),
+                _buildIndicatorCard('52w High', detail.week52High != null ? '₹${detail.week52High!.toStringAsFixed(1)}' : 'N/A',
+                    'Resistance'),
+                _buildIndicatorCard('52w Low', detail.week52Low != null ? '₹${detail.week52Low!.toStringAsFixed(1)}' : 'N/A',
+                    'Support'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndicatorCard(String title, String value, String status) {
+    Color statusColor = Colors.grey;
+    if (status.contains('Bullish') || status.contains('above') || status.contains('Buy')) {
+      statusColor = const Color(0xFF10B981);
+    } else if (status.contains('Bearish') || status.contains('below') || status.contains('Sell')) {
+      statusColor = const Color(0xFFEF4444);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F1524),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x08FFFFFF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(title, style: TextStyle(color: Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(status, style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  String _getRsiStatus(double? rsi) {
+    if (rsi == null) return 'No Data';
+    if (rsi < 35) return 'Oversold (Buy)';
+    if (rsi > 70) return 'Overbought (Sell)';
+    return 'Neutral';
+  }
+
+  String _getMaStatus(double? price, double? ma) {
+    if (price == null || ma == null) return 'No Data';
+    return price > ma ? 'Price above MA' : 'Price below MA';
+  }
+
+  Widget _buildSignalsHistoryFeed() {
+    if (_stockSignals.isEmpty) {
+      return const Card(
+        color: Color(0xFF161C2D),
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(
+            child: Text('No historical signals generated for this stock.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _stockSignals.length,
+      itemBuilder: (context, index) {
+        final sig = _stockSignals[index];
+        final bool isBuy = sig.signalType == 'BUY';
+        final Color typeColor = isBuy ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+        final dateStr = '${sig.signalDate.day.toString().padLeft(2, '0')}-${sig.signalDate.month.toString().padLeft(2, '0')}-${sig.signalDate.year}';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          color: const Color(0xFF161C2D),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: typeColor.withOpacity(0.2)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: typeColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        sig.signalType,
+                        style: TextStyle(color: typeColor, fontWeight: FontWeight.bold, fontSize: 11),
+                      ),
+                    ),
+                    Text(
+                      dateStr,
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  sig.strategy.replaceAll('_', ' '),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  sig.notes,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Trigger Price: ₹${sig.triggerPrice.toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -820,6 +1520,6 @@ class SparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SparklinePainter oldDelegate) {
-    return oldDelegate.data != data || oldDelegate.lineColor != oldDelegate.lineColor;
+    return oldDelegate.data != data || oldDelegate.lineColor != lineColor;
   }
 }
