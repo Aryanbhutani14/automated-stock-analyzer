@@ -25,6 +25,12 @@ public class StockDataScheduler {
     @Autowired
     private SignalService signalService;
 
+    @Autowired
+    private com.stockanalyzer.backend.service.AlertNotificationService alertNotificationService;
+
+    @Autowired
+    private com.stockanalyzer.backend.service.AiSummaryService aiSummaryService;
+
     /**
      * Full daily pipeline - runs automatically on weekdays at 6:30 PM IST (1:00 PM UTC).
      */
@@ -36,16 +42,24 @@ public class StockDataScheduler {
 
         try {
             // Step 1: Sync price data from Yahoo Finance
-            logger.info("Step 1/3 -- Fetching market data from Yahoo Finance");
+            logger.info("Step 1/5 -- Fetching market data from Yahoo Finance");
             yahooFinanceService.syncAllActiveStocks();
 
             // Step 2: Calculate technical indicators
-            logger.info("Step 2/3 -- Calculating technical indicators");
+            logger.info("Step 2/5 -- Calculating technical indicators");
             indicatorService.calculateForAllStocks();
 
             // Step 3: Generate BUY/SELL signals
-            logger.info("Step 3/3 -- Generating buy/sell signals");
+            logger.info("Step 3/5 -- Generating buy/sell signals");
             signalService.generateSignalsForAllStocks();
+
+            // Step 4: Process active alerts
+            logger.info("Step 4/5 -- Evaluating user conditional alerts");
+            alertNotificationService.processAllAlerts();
+
+            // Step 5: Refresh AI summaries
+            logger.info("Step 5/5 -- Refreshing AI summaries");
+            aiSummaryService.generateForAllStocks();
 
             logger.info("Daily pipeline completed successfully at {}", LocalDateTime.now());
         } catch (Exception e) {

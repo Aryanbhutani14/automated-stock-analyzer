@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/stock_provider.dart';
 import '../data/models/stock_model.dart';
+import 'watchlist_screen.dart';
+import 'alerts_screen.dart';
+import 'backtest_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -96,7 +99,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Text(
           _currentIndex == 0
               ? 'STOCK ANALYZER'
-              : (_currentIndex == 1 ? 'TECHNICAL SCREENER' : 'BUY/SELL SIGNALS'),
+              : (_currentIndex == 1
+                  ? 'TECHNICAL SCREENER'
+                  : (_currentIndex == 2
+                      ? 'BUY/SELL SIGNALS'
+                      : (_currentIndex == 3
+                          ? 'PORTFOLIO WATCHLISTS'
+                          : 'ALERTS & SIMULATOR'))),
           style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, letterSpacing: 1.2),
         ),
         actions: [
@@ -135,6 +144,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildDashboardTab(username, stockProvider),
             _buildScreenerTab(stockProvider),
             _buildSignalsTab(stockProvider),
+            WatchlistScreen(showStockDetails: (ctx, stock) => _showStockDetails(ctx, stock)),
+            _buildAlertsAndSimulatorTab(),
           ],
         ),
       ),
@@ -153,6 +164,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _runScreener();
           } else if (index == 2) {
             _runSignalsFeed();
+          } else if (index == 3) {
+            context.read<StockProvider>().fetchWatchlists();
+          } else if (index == 4) {
+            context.read<StockProvider>().fetchAlerts();
+            context.read<StockProvider>().fetchBacktestHistory();
           }
         },
         items: const [
@@ -167,6 +183,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.flash_on_rounded),
             label: 'Signals',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark_rounded),
+            label: 'Watchlist',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications_active_rounded),
+            label: 'Alerts/Sim',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertsAndSimulatorTab() {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            color: const Color(0xFF0F1524),
+            child: const TabBar(
+              dividerColor: Colors.transparent,
+              indicatorColor: Color(0xFF6366F1),
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.grey,
+              labelStyle: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+              tabs: [
+                Tab(text: 'ALERTS', icon: Icon(Icons.notifications_active_rounded, size: 18)),
+                Tab(text: 'STRATEGY SIMULATOR', icon: Icon(Icons.analytics_rounded, size: 18)),
+              ],
+            ),
+          ),
+          const Expanded(
+            child: TabBarView(
+              children: [
+                AlertsScreen(),
+                BacktestScreen(),
+              ],
+            ),
           ),
         ],
       ),
@@ -958,13 +1014,19 @@ class _StockDetailsBottomSheet extends StatefulWidget {
 class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
   StockDetailModel? _detail;
   List<SignalModel> _stockSignals = [];
+  AiSummaryModel? _aiSummary;
   bool _isLoading = true;
+  bool _loadingSummary = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _loadDetail();
+    _loadAiSummary();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StockProvider>().fetchWatchlists();
+    });
   }
 
   void _loadDetail() async {
@@ -990,6 +1052,103 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
         });
       }
     }
+  }
+
+  void _loadAiSummary() async {
+    if (!mounted) return;
+    setState(() {
+      _loadingSummary = true;
+    });
+    try {
+      final summary = await context.read<StockProvider>().fetchAiSummary(widget.stock.symbol);
+      if (mounted) {
+        setState(() {
+          _aiSummary = summary;
+          _loadingSummary = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingSummary = false;
+        });
+      }
+    }
+  }
+
+  void _showWatchlistSelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161C2D),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Consumer<StockProvider>(
+          builder: (context, provider, child) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'ADD/REMOVE FROM WATCHLISTS',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Outfit'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.grey),
+                        onPressed: () => Navigator.pop(ctx),
+                      )
+                    ],
+                  ),
+                  const Divider(color: Color(0x10FFFFFF)),
+                  if (provider.watchlists.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20.0),
+                      child: Center(
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please create a watchlist in the Watchlists tab first.')),
+                            );
+                          },
+                          child: const Text('CREATE WATCHLIST IN TAB', style: TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: provider.watchlists.length,
+                      itemBuilder: (c, idx) {
+                        final wl = provider.watchlists[idx];
+                        final hasStock = wl.stocks.any((s) => s.symbol.toUpperCase() == widget.stock.symbol.toUpperCase());
+                        return CheckboxListTile(
+                          activeColor: const Color(0xFF6366F1),
+                          checkColor: Colors.white,
+                          title: Text(wl.name, style: const TextStyle(color: Colors.white)),
+                          subtitle: Text('${wl.stocks.length} stocks', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          value: hasStock,
+                          onChanged: (val) {
+                            if (val == true) {
+                              provider.addStockToWatchlist(wl.id, widget.stock.symbol);
+                            } else {
+                              provider.removeStockFromWatchlist(wl.id, widget.stock.symbol);
+                            }
+                          },
+                        );
+                      },
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -1083,6 +1242,11 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
                 ),
               ),
               IconButton(
+                icon: const Icon(Icons.bookmark_add_outlined, color: Color(0xFF06B6D4)),
+                tooltip: 'Manage Watchlists',
+                onPressed: _showWatchlistSelector,
+              ),
+              IconButton(
                 icon: const Icon(Icons.close_rounded, color: Colors.white70),
                 onPressed: () => Navigator.pop(context),
               )
@@ -1172,6 +1336,10 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
               ),
               const SizedBox(height: 16),
 
+              // AI Stock Profile
+              _buildAiSummaryCard(),
+              const SizedBox(height: 16),
+
               // Technical Indicators Grid
               _buildTechnicalIndicatorsGrid(_detail!),
               const SizedBox(height: 16),
@@ -1244,6 +1412,70 @@ class _StockDetailsBottomSheetState extends State<_StockDetailsBottomSheet> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAiSummaryCard() {
+    return Card(
+      color: const Color(0xFF161C2D),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0x10FFFFFF)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF06B6D4), size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'AI STOCK PROFILE',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Outfit', letterSpacing: 0.5),
+                    ),
+                  ],
+                ),
+                if (!_loadingSummary)
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.grey, size: 18),
+                    onPressed: _loadAiSummary,
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  )
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loadingSummary)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(color: Color(0xFF6366F1), strokeWidth: 2.5),
+                  ),
+                ),
+              )
+            else if (_aiSummary != null)
+              Text(
+                _aiSummary!.summaryText,
+                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.45, fontFamily: 'Outfit'),
+              )
+            else
+              Center(
+                child: TextButton(
+                  onPressed: _loadAiSummary,
+                  child: const Text('GENERATE AI TECHNICAL SUMMARY', style: TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 

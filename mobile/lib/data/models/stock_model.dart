@@ -207,3 +207,165 @@ class ScreenerResultModel {
   }
 }
 
+class WatchlistModel {
+  final int id;
+  final String name;
+  final String description;
+  final List<StockModel> stocks;
+  final DateTime createdAt;
+
+  WatchlistModel({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.stocks,
+    required this.createdAt,
+  });
+
+  factory WatchlistModel.fromJson(Map<String, dynamic> json) {
+    return WatchlistModel(
+      id: json['id'] as int,
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      stocks: (json['stocks'] as List<dynamic>?)
+              ?.map((e) => StockModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+}
+
+class AlertModel {
+  final int id;
+  final String symbol;
+  final String name;
+  final String alertType;
+  final double? threshold;
+  final bool active;
+  final DateTime? lastTriggered;
+  final DateTime createdAt;
+
+  AlertModel({
+    required this.id,
+    required this.symbol,
+    required this.name,
+    required this.alertType,
+    this.threshold,
+    required this.active,
+    this.lastTriggered,
+    required this.createdAt,
+  });
+
+  factory AlertModel.fromJson(Map<String, dynamic> json) {
+    return AlertModel(
+      id: json['id'] as int,
+      symbol: json['symbol'] ?? '',
+      name: json['name'] ?? '',
+      alertType: json['alertType'] ?? '',
+      threshold: json['threshold'] != null ? (json['threshold'] as num).toDouble() : null,
+      active: json['active'] as bool? ?? true,
+      lastTriggered: json['lastTriggered'] != null ? DateTime.parse(json['lastTriggered'] as String) : null,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+}
+
+class AiSummaryModel {
+  final String symbol;
+  final String summaryText;
+  final DateTime summaryDate;
+  final String modelUsed;
+
+  AiSummaryModel({
+    required this.symbol,
+    required this.summaryText,
+    required this.summaryDate,
+    required this.modelUsed,
+  });
+
+  factory AiSummaryModel.fromJson(Map<String, dynamic> json) {
+    return AiSummaryModel(
+      symbol: json['symbol'] ?? '',
+      summaryText: json['summaryText'] ?? '',
+      summaryDate: DateTime.parse(json['summaryDate'] as String),
+      modelUsed: json['modelUsed'] ?? '',
+    );
+  }
+}
+
+class TradeLogModel {
+  final String type;
+  final DateTime date;
+  final double price;
+  final double shares;
+  final double value;
+  final double? profitPct;
+
+  TradeLogModel({
+    required this.type,
+    required this.date,
+    required this.price,
+    required this.shares,
+    required this.value,
+    this.profitPct,
+  });
+
+  factory TradeLogModel.fromJson(Map<String, dynamic> json) {
+    return TradeLogModel(
+      type: json['type'] ?? '',
+      date: DateTime.parse(json['date'] as String),
+      price: (json['price'] as num).toDouble(),
+      shares: (json['shares'] as num).toDouble(),
+      value: (json['value'] as num).toDouble(),
+      profitPct: json['profitPct'] != null ? (json['profitPct'] as num).toDouble() : null,
+    );
+  }
+}
+
+class BacktestResultModel {
+  final int? id;
+  final String strategyName;
+  final String symbol;
+  final DateTime startDate;
+  final DateTime endDate;
+  final double? totalReturnPct;
+  final double? winRatePct;
+  final int? totalTrades;
+  final double? maxDrawdownPct;
+  final List<TradeLogModel> trades;
+  final DateTime? createdAt;
+
+  BacktestResultModel({
+    this.id,
+    required this.strategyName,
+    required this.symbol,
+    required this.startDate,
+    required this.endDate,
+    this.totalReturnPct,
+    this.winRatePct,
+    this.totalTrades,
+    this.maxDrawdownPct,
+    required this.trades,
+    this.createdAt,
+  });
+
+  factory BacktestResultModel.fromJson(Map<String, dynamic> json) {
+    return BacktestResultModel(
+      id: json['id'] as int?,
+      strategyName: json['strategyName'] ?? '',
+      symbol: json['symbol'] ?? '',
+      startDate: DateTime.parse(json['startDate'] as String),
+      endDate: DateTime.parse(json['endDate'] as String),
+      totalReturnPct: json['totalReturnPct'] != null ? (json['totalReturnPct'] as num).toDouble() : null,
+      winRatePct: json['winRatePct'] != null ? (json['winRatePct'] as num).toDouble() : null,
+      totalTrades: json['totalTrades'] != null ? (json['totalTrades'] as num).toInt() : null,
+      maxDrawdownPct: json['maxDrawdownPct'] != null ? (json['maxDrawdownPct'] as num).toDouble() : null,
+      trades: (json['trades'] as List<dynamic>?)
+              ?.map((e) => TradeLogModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+    );
+  }
+}
