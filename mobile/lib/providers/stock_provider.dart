@@ -7,7 +7,7 @@ import '../data/models/stock_model.dart';
 class StockProvider extends ChangeNotifier {
   final Dio _dio = Dio();
   
-  static final String _host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
+  static final String _host = Platform.isAndroid ? '192.168.1.12' : 'localhost';
   final String _baseUrl = 'http://$_host:8080/api/stocks';
 
   List<StockModel> _stocks = [];

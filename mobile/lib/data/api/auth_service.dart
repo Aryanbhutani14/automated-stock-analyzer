@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AuthService {
   final Dio _dio = Dio();
   
-  static final String _host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
+  static final String _host = Platform.isAndroid ? '192.168.1.12' : 'localhost';
   final String _baseUrl = 'http://$_host:8080/api/auth';
 
   Future<String?> login(String usernameOrEmail, String password) async {
